@@ -900,3 +900,38 @@ no equivalent submission was found, or a permanent URL to the upstream submissio
   source: armada
   upstream: local
   notes: Uses single-channel associated scans with TX draining and home-channel rest. Tested on KONKR Pocket FIT Elite.
+
+## Third-party kmods
+
+Built out-of-tree against this kernel in `scripts/build-kernel.sh` (step 5b)
+and staged under `lib/modules/<kver>/extra/`; `build_files/20-install-kernel.sh`
+depmods over them and dracut bundles them into the initramfs via the
+`92armada-xone` module (`--add armada-xone` in
+`build_files/55-generate-initramfs.sh`), which also fails the build if any of
+the modules or the dongle firmware go missing.
+
+- `extra/xone/` — xone (dlundqvist/xone, pinned by commit in the build script)
+  Implements Microsoft's Game Input Protocol (GIP) for Xbox One/Series:
+  `xone_wired` (wired USB), `xone_dongle` (Xbox Wireless Dongle, MT76), and
+  the per-device drivers (`xone_gip_*`), which autoload through their
+  `gip:` MODULE_ALIAS entries. The dongle firmware blobs are Microsoft's and
+  are fetched at build time (not committed) by
+  `build_files/21-xone-dongle-firmware.sh`, which downloads the Windows
+  driver catalog CABs and verifies both the CAB and the extracted
+  `xone_dongle_{02e6,02fe,02f9,091e}.bin` blobs by sha256 (same source and
+  hashes as upstream xone's install/firmware.sh and negativo17's
+  xone-kmod-common, which is what Bazzite ships).
+- `extra/xpad-noone/` — xpad-noone (forkymcforkface/xpad-noone, pinned)
+  Xbox 360 / 360 Wireless support; the xone README's companion to xone.
+- `system_files/etc/modprobe.d/xone.conf` — per the xone README, in-tree
+  `xpad` is blacklisted (xone supersedes it for One/Series) and `mt76x2u`
+  is blacklisted so it cannot grab the dongle. Note that stock xpad-noone
+  still carries Xbox One vendor match entries, so for *wired* One/Series
+  both `xone_wired` and `xpad-noone` alias-match; depmod's alias ordering
+  picks one deterministically and either driver is functional. The dongle
+  path (xone_dongle only) is unambiguous.
+- `system_files/usr/lib/dracut/modules.d/92armada-xone/` — dracut module that
+  pulls the above into the initramfs; dracut's default selection does not
+  cover out-of-tree `extra/` modules (70kernel-modules-extra only follows
+  depmod.d search/override/external entries), and the dongle firmware names
+  are composed at runtime so modinfo introspection cannot see them.

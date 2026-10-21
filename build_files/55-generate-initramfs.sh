@@ -18,6 +18,7 @@ dracut \
     --add ostree \
     --add armada-splash \
     --add armada-ostree-fallback \
+    --add armada-xone \
     "${IMG}" "${KVER}"
 
 # dracut drops modules silently: fail the build rather than ship without.
@@ -32,6 +33,17 @@ required=(
     usr/libexec/armada/armada-ostree-fallback \
     usr/lib/systemd/system/ostree-prepare-root.service.d/armada-fallback.conf \
     usr/lib/ostree/ostree-prepare-root
+
+    # xone GIP stack + Xbox 360 fallback (see system_files/etc/modprobe.d/xone.conf)
+    usr/lib/modules/${KVER}/extra/xone/xone_gip.ko \
+    usr/lib/modules/${KVER}/extra/xone/xone_wired.ko \
+    usr/lib/modules/${KVER}/extra/xone/xone_dongle.ko \
+    usr/lib/modules/${KVER}/extra/xone/xone_gip_gamepad.ko \
+    usr/lib/modules/${KVER}/extra/xpad-noone/xpad-noone.ko \
+    usr/lib/firmware/xone_dongle_02e6.bin \
+    usr/lib/firmware/xone_dongle_02fe.bin \
+    usr/lib/firmware/xone_dongle_02f9.bin \
+    usr/lib/firmware/xone_dongle_091e.bin
 )
 
 if ! lsinitrd "${IMG}" | awk '
