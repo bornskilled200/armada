@@ -16,6 +16,17 @@ PATCHES_DIR="${REPO_ROOT}/patches"
 DTS_DIR="${REPO_ROOT}/dts"
 KCONFIG_OVERRIDES="${REPO_ROOT}/config/armada-kernel.config.overrides"
 
+# ---------- Third-party Xbox controller kmods (see PATCHES.md) ----------
+# Built against this tree and staged under lib/modules/<kver>/extra/. Pinned
+# by commit; the tarball hashes keep the fetch reproducible.
+XONE_REF="${XONE_REF:-f2aa9fe01103d7600553b505b298ff0bd47ff280}"
+XONE_SHA256="${XONE_SHA256:-a41601d1c4eb974fe5f9edd8e5ed45ef738e73b8f478e5e605cc59cd9a9960fc}"
+XONE_VERSION="${XONE_VERSION:-0.5.8+${XONE_REF:0:12}}"
+XPAD_NOONE_REF="${XPAD_NOONE_REF:-a52e32cf182435d608e66bef9a6c89ebac891999}"
+XPAD_NOONE_SHA256="${XPAD_NOONE_SHA256:-05e9928025db9be38c18a352bfff3a7590e37d807090949f7f3c3ce0d223a0e7}"
+XONE_DIR="${WORK_DIR}/xone-src"
+XPAD_NOONE_DIR="${WORK_DIR}/xpad-noone-src"
+
 # ---------- Host arch / cross-compile setup ----------
 HOST_ARCH=$(uname -m)
 JOBS=$(nproc)
@@ -230,6 +241,39 @@ make "${MAKE_ARGS[@]}" Image dtbs modules
 command -v ccache >/dev/null 2>&1 && ccache -s || true
 size vmlinux 2>/dev/null || true
 
+# ---------- 5b. Third-party Xbox controller kmods (xone + xpad-noone) ----------
+# xone implements Microsoft's Game Input Protocol (GIP) for Xbox One/Series:
+# wired USB (xone_wired) and the Xbox Wireless Dongle (xone_dongle), plus the
+# per-device GIP drivers. The in-tree xpad is blacklisted at runtime
+# (system_files/etc/modprobe.d/xone.conf); xpad-noone keeps Xbox 360 working.
+# (See the xone README for the rationale of this split.)
+fetch_src() {
+    local url="$1" sha="$2" name="$3" dest="$4"
+    local tgz="${WORK_DIR}/${name}.tar.gz"
+    if [ ! -f "${tgz}" ] || ! echo "${sha}  ${tgz}" | sha256sum -c --status; then
+        rm -f "${tgz}"
+        echo "==> Downloading ${url}"
+        curl -fsSL -o "${tgz}" "${url}"
+    fi
+    echo "${sha}  ${tgz}" | sha256sum -c
+    rm -rf "${dest}"
+    tar -xf "${tgz}" -C "${WORK_DIR}"
+    # codeload names the top dir <repo>-<ref>; normalise it
+    mv "${WORK_DIR}/$(tar -tf "${tgz}" | head -1 | cut -d/ -f1)" "${dest}"
+}
+
+echo "==> Building xone ${XONE_VERSION} + xpad-noone"
+fetch_src "https://codeload.github.com/dlundqvist/xone/tar.gz/${XONE_REF}" \
+    "${XONE_SHA256}" xone "${XONE_DIR}"
+fetch_src "https://codeload.github.com/forkymcforkface/xpad-noone/tar.gz/${XPAD_NOONE_REF}" \
+    "${XPAD_NOONE_SHA256}" xpad-noone "${XPAD_NOONE_DIR}"
+
+# xone embeds its version from the #VERSION# marker
+find "${XONE_DIR}" -type f -name '*.c' -exec sed -i "s/#VERSION#/${XONE_VERSION}/" {} +
+
+make "${MAKE_ARGS[@]}" -C "${SRC_DIR}" M="${XONE_DIR}" modules
+make "${MAKE_ARGS[@]}" -C "${SRC_DIR}" M="${XPAD_NOONE_DIR}" modules
+
 # ---------- 6. Stage outputs ----------
 STAGE="${WORK_DIR}/staging-${KVER}"
 rm -rf "${STAGE}"
@@ -239,6 +283,25 @@ echo "==> Staging vmlinuz + modules + DTBs"
 cp arch/arm64/boot/Image "${STAGE}/lib/modules/${KVER}/vmlinuz"
 make "${MAKE_ARGS[@]}" INSTALL_MOD_PATH="${STAGE}" INSTALL_MOD_STRIP=1 modules_install >/dev/null
 rm -f "${STAGE}/lib/modules/${KVER}/build" "${STAGE}/lib/modules/${KVER}/source"
+
+# Third-party kmods; 20-install-kernel.sh runs depmod over the extracted tree
+STRIP="strip"
+[ "${HOST_ARCH}" = "aarch64" ] || STRIP="aarch64-linux-gnu-strip"
+XONE_MODULES=(
+    xone_gip xone_wired xone_dongle
+    xone_gip_gamepad xone_gip_headset xone_gip_chatpad
+    xone_gip_madcatz_strat xone_gip_madcatz_glam xone_gip_pdp_jaguar
+)
+mkdir -p "${STAGE}/lib/modules/${KVER}/extra/xone"
+for m in "${XONE_MODULES[@]}"; do
+    [ -f "${XONE_DIR}/${m}.ko" ] || { echo "ERROR: ${XONE_DIR}/${m}.ko missing"; exit 1; }
+    install -m 0644 "${XONE_DIR}/${m}.ko" "${STAGE}/lib/modules/${KVER}/extra/xone/"
+    "${STRIP}" --strip-unneeded "${STAGE}/lib/modules/${KVER}/extra/xone/${m}.ko"
+done
+mkdir -p "${STAGE}/lib/modules/${KVER}/extra/xpad-noone"
+[ -f "${XPAD_NOONE_DIR}/xpad-noone.ko" ] || { echo "ERROR: ${XPAD_NOONE_DIR}/xpad-noone.ko missing"; exit 1; }
+install -m 0644 "${XPAD_NOONE_DIR}/xpad-noone.ko" "${STAGE}/lib/modules/${KVER}/extra/xpad-noone/"
+"${STRIP}" --strip-unneeded "${STAGE}/lib/modules/${KVER}/extra/xpad-noone/xpad-noone.ko"
 
 for dts in "${DTS_DIR}"/*.dts; do
     base=$(basename "${dts}" .dts)
@@ -255,6 +318,7 @@ Source: linux-${KERNEL_VERSION} (kernel.org stable)
 Built: armada-builder on ${HOST_ARCH}
 Patches applied: ${APPLIED:-?} (from patches/series)
 DTBs included: $(ls ${DTS_DIR}/*.dts | wc -l) boards (SM8250 + SM8550 + SM8650 + SM8750)
+Xbox kmods: xone ${XONE_VERSION} (dlundqvist/xone ${XONE_REF:0:12}), xpad-noone (forkymcforkface/xpad-noone ${XPAD_NOONE_REF:0:12}) under extra/
 Repackaged for: armada
 EOF
 

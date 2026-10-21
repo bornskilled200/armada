@@ -27,6 +27,8 @@ pkgs=(
     upower
     atheros-firmware
     qcom-firmware
+    # regulatory database for the MT76-based Xbox Wireless Dongle (xone)
+    wireless-regdb
 
     # CLI tools
     binutils
