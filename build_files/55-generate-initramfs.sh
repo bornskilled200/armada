@@ -18,6 +18,7 @@ dracut \
     --add ostree \
     --add armada-splash \
     --add armada-ostree-fallback \
+    --add armada-xone \
     "${IMG}" "${KVER}"
 
 # dracut drops modules silently: fail the build rather than ship without.

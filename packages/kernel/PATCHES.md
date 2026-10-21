@@ -905,18 +905,18 @@ no equivalent submission was found, or a permanent URL to the upstream submissio
 
 Built out-of-tree against this kernel in `scripts/build-kernel.sh` (step 5b)
 and staged under `lib/modules/<kver>/extra/`; `build_files/20-install-kernel.sh`
-depmods over them and dracut (`--no-hostonly`) bundles them into the initramfs.
-`build_files/55-generate-initramfs.sh` fails the build if they go missing.
+depmods over them and dracut bundles them into the initramfs via the
+`92armada-xone` module (`--add armada-xone` in
+`build_files/55-generate-initramfs.sh`), which also fails the build if any of
+the modules or the dongle firmware go missing.
 
 - `extra/xone/` — xone (dlundqvist/xone, pinned by commit in the build script)
   Implements Microsoft's Game Input Protocol (GIP) for Xbox One/Series:
-  `xone_wired` (wired USB), `xone_dongle` (Xbox Wireless Dongle, MT76; the
-  dongle firmware `xone_dongle_{02e6,02fe,02f9,091e}.bin` is vendored under
-  `system_files/usr/lib/firmware/` and pinned for dracut via
-  `system_files/usr/lib/dracut/dracut.conf.d/99-xone-dongle-firmware.conf`
-  because the firmware name is composed at runtime), and the per-device
-  drivers (`xone_gip_*`) which autoload through their `gip:` MODULE_ALIAS
-  entries. The dongle firmware blobs come from Microsoft's public driver
+  `xone_wired` (wired USB), `xone_dongle` (Xbox Wireless Dongle, MT76), and
+  the per-device drivers (`xone_gip_*`), which autoload through their
+  `gip:` MODULE_ALIAS entries. The dongle firmware blobs
+  (`xone_dongle_{02e6,02fe,02f9,091e}.bin`) are vendored under
+  `system_files/usr/lib/firmware/` and come from Microsoft's public driver
   catalog (same source/hashes as negativo17's xone-kmod-common, which is what
   Bazzite ships).
 - `extra/xpad-noone/` — xpad-noone (forkymcforkface/xpad-noone, pinned)
@@ -924,3 +924,8 @@ depmods over them and dracut (`--no-hostonly`) bundles them into the initramfs.
 - `system_files/etc/modprobe.d/xone.conf` — per the xone README, in-tree
   `xpad` is blacklisted (xone supersedes it for One/Series) and `mt76x2u`
   is blacklisted so it cannot grab the dongle.
+- `system_files/usr/lib/dracut/modules.d/92armada-xone/` — dracut module that
+  pulls the above into the initramfs; dracut's default selection does not
+  cover out-of-tree `extra/` modules (70kernel-modules-extra only follows
+  depmod.d search/override/external entries), and the dongle firmware names
+  are composed at runtime so modinfo introspection cannot see them.
