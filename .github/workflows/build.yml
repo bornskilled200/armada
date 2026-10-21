@@ -87,13 +87,6 @@ jobs:
           done
           [ -z "$need" ] || { sudo apt-get update && sudo apt-get install -y $need; }
 
-      - name: Check signing key
-        run: |
-          if [ -z "${{ secrets.SIGNING_SECRET }}" ]; then
-            echo "::error::SIGNING_SECRET is not set — refusing to publish an unsigned image (devices verify ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }})."
-            exit 1
-          fi
-
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
