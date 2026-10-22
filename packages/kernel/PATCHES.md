@@ -911,25 +911,22 @@ depmods over them and dracut bundles them into the initramfs via the
 the modules or the dongle firmware go missing.
 
 - `extra/xone/` — xone (dlundqvist/xone, pinned by commit in the build script)
-  Implements Microsoft's Game Input Protocol (GIP) for Xbox One/Series:
-  `xone_wired` (wired USB), `xone_dongle` (Xbox Wireless Dongle, MT76), and
-  the per-device drivers (`xone_gip_*`), which autoload through their
-  `gip:` MODULE_ALIAS entries. The dongle firmware blobs are Microsoft's and
-  are fetched at build time (not committed) by
-  `build_files/21-xone-dongle-firmware.sh`, which downloads the Windows
-  driver catalog CABs and verifies both the CAB and the extracted
+  Implements Microsoft's Game Input Protocol (GIP). Only the dongle stack is
+  installed, matching Bazzite: `xone_dongle` (Xbox Wireless Dongle, MT76 —
+  the only driver for it) and the per-device drivers (`xone_gip_*`), which
+  autoload through their `gip:` MODULE_ALIAS entries. `xone_wired` is
+  compiled but deliberately not installed: in-tree xpad already handles
+  wired One/Series (plus Xbox 360 / 360 Wireless and legacy pads), and
+  keeping xpad avoids blacklisting it or shipping xpad-noone. The dongle
+  firmware blobs are Microsoft's and are fetched at build time (not
+  committed) by `build_files/21-xone-dongle-firmware.sh`, which downloads the
+  Windows driver catalog CABs and verifies both the CAB and the extracted
   `xone_dongle_{02e6,02fe,02f9,091e}.bin` blobs by sha256 (same source and
   hashes as upstream xone's install/firmware.sh and negativo17's
   xone-kmod-common, which is what Bazzite ships).
-- `extra/xpad-noone/` — xpad-noone (forkymcforkface/xpad-noone, pinned)
-  Xbox 360 / 360 Wireless support; the xone README's companion to xone.
-- `system_files/etc/modprobe.d/xone.conf` — per the xone README, in-tree
-  `xpad` is blacklisted (xone supersedes it for One/Series) and `mt76x2u`
-  is blacklisted so it cannot grab the dongle. Note that stock xpad-noone
-  still carries Xbox One vendor match entries, so for *wired* One/Series
-  both `xone_wired` and `xpad-noone` alias-match; depmod's alias ordering
-  picks one deterministically and either driver is functional. The dongle
-  path (xone_dongle only) is unambiguous.
+- `system_files/etc/modprobe.d/xone.conf` — `mt76x2u` is blacklisted so it
+  cannot grab the dongle before xone_dongle. xpad is intentionally NOT
+  blacklisted (see above).
 - `system_files/usr/lib/dracut/modules.d/92armada-xone/` — dracut module that
   pulls the above into the initramfs; dracut's default selection does not
   cover out-of-tree `extra/` modules (70kernel-modules-extra only follows
