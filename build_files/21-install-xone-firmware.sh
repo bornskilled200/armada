@@ -1,16 +1,11 @@
 #!/bin/bash
 set -euxo pipefail
 
-# Xbox Wireless Dongle (MT76) firmware for the xone kmods (extra/xone).
-#
-# The blobs are Microsoft's, shipped in public Windows driver catalog CABs —
-# same source and hashes as upstream xone's install/firmware.sh and
-# negativo17's xone-kmod-common (what Bazzite ships). Fetch and hash-pin at
-# build time instead of committing the binaries.
-#
-# Runs after 20-install-kernel.sh so the files are in place when
-# 55-generate-initramfs.sh runs dracut (the 92armada-xone dracut module pins
-# them into the initramfs). cabextract comes from 10-base-packages.sh.
+# Xbox Wireless Dongle (MT76) firmware for the xone dongle kmod. Microsoft's
+# blobs, fetched from the public Windows driver catalog and hash-pinned
+# rather than committed (same source and hashes as xone's install/firmware.sh
+# and Bazzite's xone-kmod-common). Must land before 55-generate-initramfs,
+# which pins them into the initramfs via the 92armada-xone dracut module.
 
 # "<cab-sha256> <url> <member> <bin-sha256> <dest-name>"
 firmwares=(
