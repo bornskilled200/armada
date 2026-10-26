@@ -919,13 +919,13 @@ the modules or the dongle firmware go missing.
   wired One/Series (plus Xbox 360 / 360 Wireless and legacy pads), and
   keeping xpad avoids blacklisting it or shipping xpad-noone. The dongle
   firmware blobs are Microsoft's and are fetched at build time (not
-  committed) by `build_files/21-xone-dongle-firmware.sh`, which downloads the
+  committed) by `build_files/21-install-xone-firmware.sh`, which downloads the
   Windows driver catalog CABs and verifies both the CAB and the extracted
   `xone_dongle_{02e6,02fe,02f9,091e}.bin` blobs by sha256 (same source and
   hashes as upstream xone's install/firmware.sh and negativo17's
   xone-kmod-common, which is what Bazzite ships).
 - `system_files/etc/modprobe.d/xone.conf` — `mt76x2u` is blacklisted so it
-  cannot grab the dongle before xone_dongle. xpad is intentionally NOT
+  cannot grab the dongle before xone_dongle. xpad is intentionally not
   blacklisted (see above).
 - `system_files/usr/lib/dracut/modules.d/92armada-xone/` — dracut module that
   pulls the above into the initramfs; dracut's default selection does not

@@ -239,12 +239,10 @@ command -v ccache >/dev/null 2>&1 && ccache -s || true
 size vmlinux 2>/dev/null || true
 
 # ---------- 5b. Third-party Xbox controller kmod (xone dongle) ----------
-# xone implements Microsoft's Game Input Protocol (GIP). Only the dongle
-# stack is installed (Bazzite's approach): xpad cannot speak the MT76 dongle
-# protocol, so xone is the only driver there, while in-tree xpad keeps
-# handling wired One/Series, Xbox 360 and legacy controllers. xone_wired is
-# compiled but deliberately not staged, so it cannot race xpad over the same
-# USB ids. See system_files/etc/modprobe.d/xone.conf and PATCHES.md.
+# xone (Game Input Protocol) dongle stack. Bazzite's approach: xpad cannot
+# speak the MT76 dongle protocol, so xone is the only dongle driver, while
+# in-tree xpad keeps wired One/Series, Xbox 360 and legacy pads. xone_wired
+# compiles but is not staged, so it cannot race xpad.
 fetch_src() {
     local url="$1" sha="$2" name="$3" dest="$4"
     local tgz="${WORK_DIR}/${name}.tar.gz"
@@ -282,8 +280,7 @@ rm -f "${STAGE}/lib/modules/${KVER}/build" "${STAGE}/lib/modules/${KVER}/source"
 # Third-party kmods; 20-install-kernel.sh runs depmod over the extracted tree
 STRIP="strip"
 [ "${HOST_ARCH}" = "aarch64" ] || STRIP="aarch64-linux-gnu-strip"
-# xone_wired is on purpose absent: in-tree xpad handles wired One/Series
-# (and 360), see step 5b.
+# xone_wired intentionally absent; in-tree xpad covers wired (see 5b).
 XONE_MODULES=(
     xone_gip xone_dongle
     xone_gip_gamepad xone_gip_headset xone_gip_chatpad

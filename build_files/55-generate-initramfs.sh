@@ -34,7 +34,7 @@ required=(
     usr/lib/systemd/system/ostree-prepare-root.service.d/armada-fallback.conf \
     usr/lib/ostree/ostree-prepare-root
 
-    # xone GIP dongle stack (see system_files/etc/modprobe.d/xone.conf)
+    # xone dongle stack + firmware (92armada-xone dracut module)
     usr/lib/modules/${KVER}/extra/xone/xone_gip.ko \
     usr/lib/modules/${KVER}/extra/xone/xone_dongle.ko \
     usr/lib/modules/${KVER}/extra/xone/xone_gip_gamepad.ko \

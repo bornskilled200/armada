@@ -1,14 +1,9 @@
 #!/bin/bash
-# Bundles the xone GIP dongle stack (extra/xone) and the Xbox Wireless
-# Dongle (MT76) firmware into the initramfs.
-#
-# dracut's default selection does not cover out-of-tree modules under
-# extra/: 70kernel-modules-extra only installs what depmod.d
-# search/override/external entries name, and the dongle firmware names are
-# composed at runtime, so modinfo introspection cannot see them either.
-# List everything explicitly; instmods fails the build if a module is
-# missing from the kernel tree.
-# (xone_wired is deliberately absent: in-tree xpad handles wired controllers.)
+# Bundles the xone GIP dongle stack and the MT76 dongle firmware into the
+# initramfs. dracut's default selection skips out-of-tree extra/ modules and
+# firmware whose names are composed at runtime, so list them explicitly;
+# instmods fails the build if a module is missing. xone_wired is deliberately
+# absent: in-tree xpad handles wired controllers.
 
 check() {
     # 255 = explicit --add only, matching the other armada modules.
